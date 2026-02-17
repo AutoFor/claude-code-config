@@ -90,6 +90,18 @@ git push -u origin $(git branch --show-current)
 
 ---
 
+## ステップ 0.5（共通）: メインリポジトリパスを記録
+
+後続の `/gh-pr-approve` Step 0 で CWD をメインリポジトリに移動するために、パスを事前に記録しておく（ここでは `cd` しない）。
+
+```bash
+git worktree list
+```
+
+出力の1行目のパスがメインリポジトリ。この値を記憶し、`/gh-pr-approve` の Step 0 で使用する。
+
+---
+
 ## ステップ 1（共通）: Skill ツールで `/gh-pr-create` を呼び出す
 
 > ⚠️ **重要: ここに到達したら、必ず以下の `/gh-pr-create` を呼び出すこと。前のサブスキルが完了しただけでは gh-finish は完了していない。**

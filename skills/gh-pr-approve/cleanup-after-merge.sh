@@ -13,13 +13,9 @@ BRANCH_TO_DELETE="${4:-}"  # 削除するブランチ名（通常ブランチの
 if [ "$WORKTREE_PATH" != "none" ]; then
   CURRENT_DIR="$(pwd -P 2>/dev/null || echo "")"
   RESOLVED_WORKTREE="$(realpath "$WORKTREE_PATH" 2>/dev/null || echo "$WORKTREE_PATH")"
-  if [ "$CURRENT_DIR" = "$RESOLVED_WORKTREE" ]; then
-    echo "ERROR: このスクリプトをWorktree内から実行しないでください。" >&2
-    echo "cwdが削除されたディレクトリを指し続け、以降のコマンドが全て失敗します。" >&2
-    echo "" >&2
-    echo "正しい実行方法:" >&2
-    echo "  cd $MAIN_REPO && bash $0 $*" >&2
-    exit 1
+  if [[ "$CURRENT_DIR" == "$RESOLVED_WORKTREE" || "$CURRENT_DIR" == "$RESOLVED_WORKTREE/"* ]]; then
+    echo "WARNING: Worktree内（またはそのサブディレクトリ）から実行されています。CWDをメインリポジトリに移動します。" >&2
+    cd "$MAIN_REPO"
   fi
 fi
 

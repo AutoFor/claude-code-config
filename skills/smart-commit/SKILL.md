@@ -15,6 +15,14 @@ allowed-tools:
 
 ### 1. 変更内容を収集
 
+まず CWD がリポジトリルートであることを保証する（サブディレクトリにいると相対パスが不一致になるため）：
+
+```bash
+cd $(git rev-parse --show-toplevel)
+```
+
+次に変更内容を収集する：
+
 ```bash
 git status --short
 git diff
