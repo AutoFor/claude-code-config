@@ -43,18 +43,11 @@ if [ "$WORKTREE_PATH" != "none" ]; then
       | sed 's|refs/heads/||')
   fi
 
-  # Worktree削除
-  git -C "$MAIN_REPO" worktree remove "$WORKTREE_PATH" 2>/dev/null || \
-    git -C "$MAIN_REPO" worktree prune
-  echo "Worktree removed: $WORKTREE_PATH"
-
-  # ローカルブランチ削除
-  if [ -n "$BRANCH_TO_DELETE" ]; then
-    git -C "$MAIN_REPO" branch -d "$BRANCH_TO_DELETE" 2>/dev/null || true
-    echo "Local branch deleted: $BRANCH_TO_DELETE"
-  fi
+  # Worktree削除を遅延（CWDが削除済みディレクトリになりStop hookがENOENTで失敗するため）
+  echo "$MAIN_REPO|$WORKTREE_PATH|$BRANCH_TO_DELETE" >> ~/.claude/pending-worktree-cleanup.txt
+  echo "Worktree cleanup deferred: $WORKTREE_PATH (will be cleaned up on next worktree creation)"
 else
-  # ローカルブランチ削除
+  # Worktree未使用時はローカルブランチを即座に削除
   if [ -n "$BRANCH_TO_DELETE" ]; then
     git -C "$MAIN_REPO" branch -d "$BRANCH_TO_DELETE" 2>/dev/null || true
     echo "Local branch deleted: $BRANCH_TO_DELETE"

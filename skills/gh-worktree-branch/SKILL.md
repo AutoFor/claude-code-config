@@ -19,6 +19,16 @@ allowed-tools:
 
 ## 実行フロー（引数ありの場合）
 
+### 0. 古い Worktree の自動掃除
+
+前回のセッションで削除が遅延された Worktree がある場合、自動的に削除する:
+
+```bash
+bash ~/.claude/skills/gh-pr-approve/cleanup-stale-worktrees.sh
+```
+
+出力がない場合は掃除不要。
+
 ### 1. リポジトリ情報を取得
 
 ```bash
