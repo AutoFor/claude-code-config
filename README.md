@@ -1,13 +1,35 @@
 # Claude Code dotfiles
 
-Claude Code のグローバル設定・スキル・MCP 設定をまとめた dotfiles リポジトリ。
+Claude Code によるAI駆動開発のためのグローバル設定・スキル・MCP 設定をまとめた dotfiles リポジトリ。
+
+## 開発スタイル
+
+Git Worktree を活用して**複数の課題を並走**させるワークフローを採用しています。
+
+- **Issue-first**: すべての作業は GitHub Issue から始まる。AI が何を実行したかのログとして Issue を必ず残す
+- **Worktree 並走**: `git worktree` で課題ごとに独立した作業ディレクトリを持ち、複数タスクを同時進行
+- **Bot 自動承認**: GitHub App Bot が PR を自動承認し、セルフマージの制限を回避
+- **ワンコマンド完結**: `/gh-finish` で Issue 作成からマージまでを一気通貫で実行可能
+
+```
+# 典型的な並走ワークフロー
+
+# Worktree A: ダークモード実装中
+~/projects/my-app-issue-10-dark-mode/
+
+# Worktree B: バグ修正中
+~/projects/my-app-issue-12-fix-login/
+
+# メインリポジトリ: 次のタスクを開始
+~/projects/my-app/
+```
 
 ## 構成
 
 ```
 .
 ├── CLAUDE.md                        # グローバルルール（全プロジェクト共通）
-├── settings.json                    # フック設定（応答完了通知など）
+├── settings.json                    # フック設定（応答完了・入力待ち通知）
 ├── windows-notify.ps1               # Windows トースト通知スクリプト
 ├── github-app-config.env.example    # GitHub App 認証情報のテンプレート
 ├── mcp/
@@ -19,7 +41,7 @@ Claude Code のグローバル設定・スキル・MCP 設定をまとめた dot
     ├── gh-worktree-branch/          # 新規 Issue + Worktree + ブランチ作成
     ├── gh-worktree-from-issue/      # 既存 Issue から Worktree + ブランチ作成
     ├── gh-pr-create/                # PR 作成（Draft PR → Ready for Review）
-    ├── gh-pr-approve/               # PR 承認・マージ・後処理
+    ├── gh-pr-approve/               # PR 承認・マージ・後処理（GitHub App Bot）
     ├── gh-finish/                   # ブランチ作成〜マージまで一括実行
     ├── japanese-comments/           # TypeScript/JS に日本語コメント追加
     └── smart-commit/                # テーマ別に自動分割コミット
@@ -50,7 +72,7 @@ cp github-app-config.env.example ~/.config/claude-github-app.env
 # 環境変数ファイルを編集して認証情報を設定
 ```
 
-GitHub App は PR の自動承認に使用します（セルフマージの制限回避）。
+GitHub App は PR の自動承認に使用します。Claude が作成した PR を Bot が承認することで、ブランチ保護ルール（承認必須）を満たしつつセルフマージを実現します。
 
 ## スキル一覧
 
@@ -62,8 +84,8 @@ GitHub App は PR の自動承認に使用します（セルフマージの制�
 | gh-worktree-from-issue | `/gh-worktree-from-issue [番号]` | 既存 Issue → Worktree + ブランチ作成 → Draft PR |
 | gh-branch | `/gh-branch` | diff から Issue + ブランチ作成（Worktree なし） |
 | gh-pr-create | `/gh-pr-create` | Draft PR を Ready for Review に変更し、承認・マージまで実行 |
-| gh-pr-approve | `/gh-pr-approve` | PR 承認 → マージ → Issue クローズ → Worktree 削除 |
-| gh-finish | `/gh-finish` | 状況を自動判定し、ブランチ作成〜マージまで一括実行 |
+| gh-pr-approve | `/gh-pr-approve` | Bot で PR 承認 → マージ → Issue クローズ → Worktree 削除 |
+| gh-finish | `/gh-finish` | 状況を自動判定し、Issue 作成〜マージまで一括実行 |
 
 ### コーディング
 
@@ -74,17 +96,39 @@ GitHub App は PR の自動承認に使用します（セルフマージの制�
 
 ## 通知
 
-`settings.json` のフック設定により、Claude Code の応答完了時に Windows トースト通知が表示されます（WSL2 環境、[BurntToast](https://github.com/Windos/BurntToast) モジュールが必要）。
+`settings.json` のフック設定により、以下のタイミングで Windows トースト通知が表示されます（WSL2 環境、[BurntToast](https://github.com/Windos/BurntToast) モジュールが必要）。
+
+| イベント | 通知内容 | サウンド |
+|---------|---------|---------|
+| Stop（応答完了） | 処理が完了しました | Reminder |
+| Notification（入力待ち） | 許可または入力を待っています | IM |
 
 ## ワークフロー例
 
-```
-# 1. 新しい作業を開始
+### 複数課題を並走させる場合
+
+```bash
+# 課題 A: Worktree で作業開始
 /gh-worktree-branch ダークモード追加
 
-# 2. コーディング（日本語コメント付き）
+# コーディング...
 「ダークモードのトグルボタンを実装して」
 
-# 3. 作業完了 → PR 作成 → マージまで一括実行
+# 作業完了 → PR 作成 → Bot 承認 → マージまで一括
 /gh-pr-create
+
+# 課題 B: 別の Issue から Worktree で作業開始
+/gh-worktree-from-issue 15
+
+# コーディング...
+
+# 作業完了
+/gh-pr-create
+```
+
+### main 上で手早く完結させる場合
+
+```bash
+# コーディング後、Issue 作成〜マージまで一発
+/gh-finish
 ```
