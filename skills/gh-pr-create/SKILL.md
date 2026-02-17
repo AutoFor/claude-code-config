@@ -85,9 +85,16 @@ gh pr list --head <ブランチ名> --state open --json number,isDraft,title
 
 既存の Draft PR がある場合、以下の手順で Ready for Review に変更する：
 
-1. `mcp__github__update_pull_request` でタイトル・本文を最終版に更新する
+1. `gh api` でタイトル・本文を最終版に更新する（`gh pr edit` は Projects classic 廃止の影響でエラーになるため使用しない）
    - タイトル: `WIP:` プレフィックスを除去し、作業内容を簡潔に記載
    - 本文: 変更内容の詳細を記載（`Closes #<Issue番号>` は維持）
+
+```bash
+gh api repos/<owner>/<repo>/pulls/<PR番号> -X PATCH \
+  -f title="<タイトル>" \
+  -f body="<本文>"
+```
+
 2. `gh pr ready <PR番号>` で Draft を解除する
 
 ### 3B. 新規 PR 作成（Draft PR がない場合）
@@ -109,7 +116,7 @@ gh pr list --head <ブランチ名> --state open --json number,isDraft,title
 
 PR 作成時に `Closes #<Issue番号>` を含めているため、通常は追加作業不要。
 
-漏れた場合のみ `mcp__github__update_pull_request` で PR 本文を更新する。
+漏れた場合のみ `gh api repos/<owner>/<repo>/pulls/<PR番号> -X PATCH -f body="..."` で PR 本文を更新する。
 
 ### 5. 自動で承認プロセスに進む
 
@@ -133,7 +140,7 @@ gh pr list --head issue-17-add-dark-mode --state open --json number,isDraft,titl
 # → [{"isDraft":true,"number":18,"title":"WIP: ダークモード追加"}]
 
 # 3A. Draft PR を Ready for Review に変更
-# mcp__github__update_pull_request でタイトル・本文を更新
+# gh api repos/owner/repo/pulls/18 -X PATCH -f title="..." -f body="..."
 # gh pr ready 18 で Draft 解除
 
 # 5. ユーザーに確認
