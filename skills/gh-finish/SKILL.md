@@ -90,7 +90,7 @@ git push -u origin $(git branch --show-current)
 
 ---
 
-## ステップ 0.5（共通）: メインリポジトリパスを記録
+## ステップ 1（共通）: メインリポジトリパスを記録
 
 後続の `/gh-pr-approve` Step 0 で CWD をメインリポジトリに移動するために、パスを事前に記録しておく（ここでは `cd` しない）。
 
@@ -102,7 +102,34 @@ git worktree list
 
 ---
 
-## ステップ 1（共通）: Skill ツールで `/gh-pr-create` を呼び出す
+## ステップ 2（共通）: Wiki ドキュメント更新
+
+> この手順はオプションであり、Wiki 更新に失敗してもマージ処理には影響しない。
+
+Skill ツールで `/gh-wiki-update` を呼び出す。
+
+```
+Skill ツール: skill = "gh-wiki-update"
+```
+
+gh-wiki-update が以下を実行する:
+1. ブランチの変更内容を分析
+2. /docs/wiki/ 配下の Markdown を更新
+3. /smart-commit で変更をコミット
+
+**Wiki 更新に失敗した場合:** エラーを表示し、ステップ 3 へ続行する。
+
+完了後、未プッシュのコミットがあればプッシュする:
+
+```bash
+git push
+```
+
+> ⚠️ **重要: gh-wiki-update が完了しても gh-finish は終わっていない。必ずステップ 3 へ続行すること。**
+
+---
+
+## ステップ 3（共通）: Skill ツールで `/gh-pr-create` を呼び出す
 
 > ⚠️ **重要: ここに到達したら、必ず以下の `/gh-pr-create` を呼び出すこと。前のサブスキルが完了しただけでは gh-finish は完了していない。**
 
