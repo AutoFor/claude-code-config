@@ -32,6 +32,11 @@ Git Worktree を活用して**複数の課題を並走**させるワークフロ
 ├── settings.json                    # フック設定（応答完了・入力待ち通知）
 ├── windows-notify.ps1               # Windows トースト通知スクリプト
 ├── github-app-config.env.example    # GitHub App 認証情報のテンプレート
+├── docs/
+│   └── wiki/                        # Wiki ソース（GitHub Actions で Wiki に同期）
+├── .github/
+│   └── workflows/
+│       └── wiki-sync.yml            # docs/wiki/ → Wiki 自動同期
 ├── mcp/
 │   └── mcp-config.json.example      # MCP サーバー設定のテンプレート
 └── skills/
@@ -43,6 +48,8 @@ Git Worktree を活用して**複数の課題を並走**させるワークフロ
     ├── gh-pr-create/                # PR 作成（Draft PR → Ready for Review）
     ├── gh-pr-approve/               # PR 承認・マージ・後処理（GitHub App Bot）
     ├── gh-finish/                   # ブランチ作成〜マージまで一括実行
+    ├── gh-wiki-init/                # Wiki 初期セットアップ（docs/wiki/ + ワークフロー生成）
+    ├── gh-wiki-update/              # コード変更から Wiki ドキュメント自動更新
     ├── japanese-comments/           # TypeScript/JS に日本語コメント追加
     └── smart-commit/                # テーマ別に自動分割コミット
 ```
@@ -94,6 +101,15 @@ GitHub App は PR の自動承認に使用します。Claude が作成した PR 
 | japanese-comments | `/japanese-comments` | TypeScript/JS コードに日本語の行末コメントを追加 |
 | smart-commit | `/smart-commit` | 変更をテーマ別に分割し Conventional Commits 形式でコミット |
 
+### ユーティリティ
+
+| スキル | コマンド | 説明 |
+|--------|---------|------|
+| z-cheatsheet | `/z-cheatsheet` | dotfiles のショートカット・コマンド検索 |
+| z-cheatsheet-add | `/z-cheatsheet-add` | チートシートに項目を追加 |
+| gh-wiki-init | `/gh-wiki-init` | Wiki 初期セットアップ（docs/wiki/ + ワークフロー生成） |
+| gh-wiki-update | `/gh-wiki-update` | コード変更を分析して Wiki ドキュメントを自動更新 |
+
 ## 通知
 
 `settings.json` のフック設定により、以下のタイミングで Windows トースト通知が表示されます（WSL2 環境、[BurntToast](https://github.com/Windos/BurntToast) モジュールが必要）。
@@ -129,6 +145,12 @@ GitHub App は PR の自動承認に使用します。Claude が作成した PR 
 ### main 上で手早く完結させる場合
 
 ```bash
-# コーディング後、Issue 作成〜マージまで一発
+# コーディング後、Issue 作成〜マージまで一発（Wiki 更新含む）
 /gh-finish
 ```
+
+### Wiki ドキュメントの仕組み
+
+- `docs/wiki/` 配下の Markdown ファイルがドキュメントのソース
+- `/gh-wiki-update` または `/gh-finish` でコード変更に基づき自動更新
+- main にマージされると GitHub Actions が Wiki リポジトリに自動同期
