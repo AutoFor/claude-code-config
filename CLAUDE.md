@@ -42,6 +42,7 @@
 | `/z-cheatsheet-add` | チートシートに項目を追加 | 「チートシートに追加して」 |
 | `/gh-init-wiki` | プロジェクトに Wiki 初期セットアップ | 「Wikiを初期化して」「Wiki作って」 |
 | `/gh-wiki-update` | コード変更から Wiki ドキュメントを自動更新 | 「Wikiを更新して」「ドキュメント同期」 |
+| `/draw-io-to-wiki` | draw.io ダイアグラムを作成し SVG で Wiki に追加 | 「図を描いて」「ダイアグラム作って」 |
 
 スキルは `~/.claude/skills/` に保存されています。
 

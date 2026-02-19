@@ -41,7 +41,11 @@ allowed-tools:
 
 ### ステップ 3: `docs/wiki/` 作成
 
-ディレクトリを作成し、プロジェクト分析に基づいて初期ページを生成する。
+ディレクトリを作成し、プロジェクト分析に基づいて初期ページとダイアグラムを生成する。
+
+```bash
+mkdir -p docs/wiki/images
+```
 
 #### 生成するページ
 
@@ -56,6 +60,25 @@ allowed-tools:
 - **Home.md**: 平易な日本語、専門用語は避けるか注釈付き、非エンジニアが読んで理解できる
 - **Specification.md**: 仕様ベース、「何ができるか」を中心に記述、フローチャートやテーブルを活用
 - **_Sidebar.md**: 全ページへのリンク一覧
+
+#### ダイアグラム生成
+
+プロジェクト分析に基づいて、`docs/wiki/images/` にアーキテクチャ図等の初期ダイアグラムを作成する。
+
+1. Write ツールで `.drawio` XML ファイルを作成する（例: `docs/wiki/images/architecture.drawio`）
+2. draw.io CLI で SVG にエクスポートする:
+
+```bash
+xvfb-run drawio --export --format svg --embed-svg-fonts true --output docs/wiki/images/<name>.svg docs/wiki/images/<name>.drawio
+```
+
+3. Wiki ページ内で SVG を参照する:
+
+```markdown
+![アーキテクチャ図](./images/architecture.svg)
+```
+
+`.drawio`（ソース）と `.svg`（出力）の両方をリポジトリにコミットする。
 
 ### ステップ 4: `.github/workflows/wiki-sync.yml` 作成
 

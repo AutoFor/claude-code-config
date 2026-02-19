@@ -29,10 +29,16 @@ Claude Code dotfiles の機能一覧と仕様です。
 | z-cheatsheet | `/z-cheatsheet` | dotfiles のショートカット・コマンド検索 |
 | z-cheatsheet-add | `/z-cheatsheet-add` | チートシートに項目を追加 |
 | gh-wiki-update | `/gh-wiki-update` | コード変更から Wiki ドキュメントを自動更新 |
+| gh-init-wiki | `/gh-init-wiki` | Wiki 初期セットアップ（ダイアグラム含む） |
+| draw-io-to-wiki | `/draw-io-to-wiki <説明>` | draw.io ダイアグラムを作成し SVG で Wiki に追加 |
 
 ## ワークフロー
 
 ### 作業開始から完了まで
+
+![スキルワークフロー](./images/skill-workflow.svg)
+
+> [draw.io ソースファイル](./images/skill-workflow.drawio) で編集できます
 
 ```
 /gh-worktree-branch "機能追加"
@@ -48,7 +54,7 @@ Claude Code dotfiles の機能一覧と仕様です。
 /gh-finish
     │
     ├── /smart-commit（変更をコミット）
-    ├── /gh-wiki-update（Wiki 更新）
+    ├── /gh-wiki-update（Wiki + ダイアグラム更新）
     ├── /gh-pr-create（PR 作成）
     └── /gh-pr-approve（承認・マージ）
         │
@@ -62,6 +68,14 @@ Claude Code dotfiles の機能一覧と仕様です。
 - コード変更時に `/gh-wiki-update` スキルが `/docs/wiki/` を更新
 - main ブランチにマージされると GitHub Actions が Wiki リポジトリに自動同期
 
+### ダイアグラム管理
+
+- `/draw-io-to-wiki` で draw.io ダイアグラムを作成し SVG にエクスポート
+- `/gh-wiki-update` はコード変更時に既存ダイアグラムの更新も自動判定
+- `/gh-init-wiki` は初期化時にアーキテクチャ図等のダイアグラムも生成
+- ソースファイル（`.drawio`）と出力（`.svg`）の両方を `docs/wiki/images/` に保持
+- SVG エクスポートは `xvfb-run drawio --export` で CLI 実行
+
 ## 通知
 
 | イベント | 通知内容 | サウンド |
@@ -71,4 +85,4 @@ Claude Code dotfiles の機能一覧と仕様です。
 
 ---
 
-*最終更新: 2026-02-18*
+*最終更新: 2026-02-20*
