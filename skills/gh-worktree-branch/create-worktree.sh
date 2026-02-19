@@ -6,9 +6,17 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
-PROJ=$(basename "$(git rev-parse --show-toplevel)")
 BRANCH="$1"
-WORKTREE_DIR="../${PROJ}-${BRANCH}"
+
+# init モード検出: .bare ディレクトリがある場合はコンテナ内にサブディレクトリとして作成
+GIT_COMMON=$(git rev-parse --git-common-dir)
+if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
+  CONTAINER_DIR="$(dirname "$GIT_COMMON")"
+  WORKTREE_DIR="${CONTAINER_DIR}/${BRANCH}"
+else
+  PROJ=$(basename "$(git rev-parse --show-toplevel)")
+  WORKTREE_DIR="../${PROJ}-${BRANCH}"
+fi
 
 git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 

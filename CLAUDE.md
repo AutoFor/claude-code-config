@@ -16,6 +16,7 @@
 
 | スキル名 | 説明 | 呼び出し方法 |
 |---------|------|------------|
+| `/gh-init-worktree` | リポジトリを worktree ベース構造に変換 | 「worktree構造にしたい」「initして」 |
 | `/gh-worktree-branch` | 新規 Issue + ブランチ作成 | 「新しい機能を追加したい」「作業を開始したい」 |
 | `/gh-worktree-from-issue` | **既存Issue**からブランチ作成 | 「Issue #123から作業したい」「既存のIssueで作業する」 |
 
@@ -39,7 +40,7 @@
 |---------|------|------------|
 | `/z-cheatsheet` | dotfiles のショートカット・コマンド検索 | 「分割のショートカットは？」「cdコマンド教えて」 |
 | `/z-cheatsheet-add` | チートシートに項目を追加 | 「チートシートに追加して」 |
-| `/gh-wiki-init` | プロジェクトに Wiki 初期セットアップ | 「Wikiを初期化して」「Wiki作って」 |
+| `/gh-init-wiki` | プロジェクトに Wiki 初期セットアップ | 「Wikiを初期化して」「Wiki作って」 |
 | `/gh-wiki-update` | コード変更から Wiki ドキュメントを自動更新 | 「Wikiを更新して」「ドキュメント同期」 |
 
 スキルは `~/.claude/skills/` に保存されています。

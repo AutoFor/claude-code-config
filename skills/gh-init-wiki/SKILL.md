@@ -1,5 +1,5 @@
 ---
-name: gh-wiki-init
+name: gh-init-wiki
 description: プロジェクトに docs/wiki/ と GitHub Actions ワークフローを作成し、Wiki 自動同期の土台をセットアップする。
 disable-model-invocation: false
 user-invocable: true

@@ -96,27 +96,39 @@ git remote -v
 
 ### 4. Git Worktree コマンドの実行
 
-生成したブランチ名でWorktreeを作成する:
+まず init モード（`.bare` 構造）かどうかを検出する:
 
 ```bash
-git worktree add ../<プロジェクト名>-<ブランチ種別> <ブランチ名>
+GIT_COMMON=$(git rev-parse --git-common-dir)
+if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
+  # init モード: コンテナ内にサブディレクトリとして作成
+  CONTAINER_DIR="$(dirname "$GIT_COMMON")"
+  WORKTREE_DIR="${CONTAINER_DIR}/<ブランチ種別>"
+else
+  # 従来モード: 隣接ディレクトリに作成
+  PROJ=$(basename "$(git rev-parse --show-toplevel)")
+  WORKTREE_DIR="../${PROJ}-<ブランチ種別>"
+fi
+git worktree add "$WORKTREE_DIR" -b <ブランチ名>
 ```
 
-**具体例:**
+**具体例（従来モード）:**
 ```bash
-# Issue #123 (feature) の場合
-git worktree add ../claude-config-feature feature/issue-123-preview-feature
+git worktree add ../claude-config-feature -b feature/issue-123-preview-feature
+```
 
-# Issue #456 (fix) の場合
-git worktree add ../claude-config-fix fix/issue-456-parse-error
+**具体例（init モード）:**
+```bash
+# コンテナが ~/projects/my-project/ の場合
+git worktree add ~/projects/my-project/feature -b feature/issue-123-preview-feature
 ```
 
 ### 5. 作業ディレクトリへの移動
 
-Worktree ディレクトリへの移動コマンドを実行:
+ステップ 4 で決定した `WORKTREE_DIR` に移動する:
 
 ```bash
-cd ../<プロジェクト名>-<ブランチ種別>
+cd "$WORKTREE_DIR"
 ```
 
 ### 5a. 空コミットを作成して push
@@ -150,7 +162,7 @@ gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue�
 Worktree の絶対パスを取得し、クリップボードにコピーする：
 
 ```bash
-WORKTREE_ABSPATH="$(cd ../<プロジェクト名>-<ブランチ種別> && pwd)"
+WORKTREE_ABSPATH="$(cd "$WORKTREE_DIR" && pwd)"
 bash ~/.claude/skills/_shared/copy-to-clipboard.sh "cd ${WORKTREE_ABSPATH} && claude"
 ```
 
