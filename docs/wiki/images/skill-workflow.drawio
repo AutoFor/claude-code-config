@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile>
+  <diagram name="スキルワークフロー">
+    <mxGraphModel dx="1422" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="10" value="作業開始" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="30" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="20" value="/gh-worktree-branch&#xa;または&#xa;/gh-worktree-from-issue" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="120" width="240" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="21" value="Issue 作成 + Worktree + Draft PR" style="text;whiteSpace=wrap;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="670" y="135" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="30" value="コーディング作業" style="rounded=0;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="220" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="40" value="/gh-finish" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="310" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="50" value="/smart-commit" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="410" width="160" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="51" value="テーマ別にコミット分割" style="text;whiteSpace=wrap;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="30" y="418" width="160" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="60" value="/gh-wiki-update" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="410" width="160" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="61" value="Wiki + ダイアグラム更新" style="text;whiteSpace=wrap;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="630" y="418" width="160" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="65" value="/draw-io-to-wiki" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="485" width="140" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="66" value="単独でも使用可能" style="text;whiteSpace=wrap;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="630" y="490" width="120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="70" value="/gh-pr-create" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="560" width="160" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="80" value="/gh-pr-approve" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="640" width="160" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="81" value="Bot 承認 + マージ + クリーンアップ" style="text;whiteSpace=wrap;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="630" y="648" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="90" value="GitHub Actions&#xa;Wiki 同期" style="rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="460" y="730" width="160" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="10" target="20" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="20" target="30" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="30" target="40" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="40" target="50" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="50" target="60" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="60" target="65" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="60" target="70" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="70" target="80" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="80" target="90" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
