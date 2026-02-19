@@ -34,10 +34,24 @@ owner/repo を特定する。
 
 ### ステップ 2: 変更内容の分析
 
+> **重要**: このステップでは**ブランチ全体の変更**を検出する。`git diff`（作業ツリーの未コミット変更）とは異なり、`git diff origin/main...HEAD` はコミット済みの変更も含むブランチ上の全差分を表示する。gh-finish 等で既にコミット・プッシュ済みでも、ブランチ差分は存在する。**必ず以下のコマンドを実際に実行すること（前のステップの出力を流用しない）。**
+
 デフォルトブランチを取得:
 
 ```bash
 git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+```
+
+リモートの最新情報を取得（ブランチ差分を正確に検出するため）:
+
+```bash
+git fetch origin <default-branch>
+```
+
+ブランチ上のコミット一覧を確認:
+
+```bash
+git log origin/<default-branch>..HEAD --oneline
 ```
 
 デフォルトブランチとの diff を取得:
@@ -51,6 +65,8 @@ git diff origin/<default-branch>...HEAD
 ```
 
 変更されたファイルの一覧と内容を把握する。
+
+> `git log` でコミットが表示されるのに `git diff` が空の場合は、リベースやマージの影響の可能性がある。その場合は `git diff origin/<default-branch>..HEAD` （ドット2つ）も試すこと。
 
 ### ステップ 3: `/docs/wiki/` の現状確認
 
@@ -75,6 +91,100 @@ Write ツールで `/docs/wiki/` 内の Markdown ファイルを更新する。
 
 - `_Sidebar.md` を自動再生成（全ページへのリンク一覧）
 - 各ページ末尾に最終更新日を記載
+
+### ステップ 6.5: ダイアグラム生成・更新
+
+変更内容に基づいて、`docs/wiki/images/` 配下のダイアグラムを作成・更新する。
+
+#### 6.5.1 既存ダイアグラムの確認
+
+`docs/wiki/images/` 内の既存 `.drawio` ファイルを一覧する:
+
+```bash
+ls docs/wiki/images/*.drawio 2>/dev/null
+```
+
+既存ファイルがある場合は Read ツールで内容を読み込み、現在のダイアグラム構成を把握する。
+
+#### 6.5.2 ダイアグラムの要否判定
+
+ステップ 2 の変更内容と 6.5.1 の既存ダイアグラムを照合し、以下を判定する:
+
+| 判定 | 条件 | アクション |
+|------|------|-----------|
+| **既存を編集** | 変更がダイアグラム内のノード・エッジに影響する（モジュール名変更、フロー変更、接続先変更等） | 6.5.3 へ |
+| **新規作成** | 新しいコンポーネント/モジュール/フローが追加され、既存ダイアグラムでカバーされない | 6.5.4 へ |
+| **不要** | 変更がダイアグラムに影響しない | ステップ 7 へスキップ |
+
+#### 6.5.3 既存 `.drawio` ファイルの編集
+
+Read ツールで対象の `.drawio` ファイルを読み込み、変更内容に合わせて Edit ツールまたは Write ツールで XML を更新する。
+
+編集の例:
+- **ノード追加**: `<mxCell>` 要素を `<root>` 内に追加
+- **ノード名変更**: 対象 `<mxCell>` の `value` 属性を更新
+- **ノード削除**: 対象 `<mxCell>` とそれに接続するエッジを削除
+- **エッジの接続先変更**: `<mxCell>` の `source` / `target` 属性を更新
+- **スタイル変更**: `style` 属性を更新
+
+> 既存ノードの `id` と座標（`<mxGeometry>`）は変更が必要な箇所のみ修正し、他は維持する。
+
+→ 6.5.5 へ進む。
+
+#### 6.5.4 新規 `.drawio` ファイル作成
+
+`docs/wiki/images/` ディレクトリが存在しない場合は作成する:
+
+```bash
+mkdir -p docs/wiki/images
+```
+
+Write ツールで `.drawio` XML ファイルを作成する。ダイアグラムの種類はプロジェクトに応じて自動判定する:
+
+| ダイアグラム例 | ファイル名 | 用途 |
+|-------------|----------|------|
+| アーキテクチャ図 | `architecture.drawio` | システム全体構成 |
+| フロー図 | `flow-*.drawio` | 処理フロー |
+| モジュール構成図 | `modules.drawio` | モジュール間の関係 |
+
+`.drawio` ファイルは draw.io XML 形式で記述する。テンプレート:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile>
+  <diagram name="ページ名">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- ここにノードとエッジを配置 -->
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+```
+
+→ 6.5.5 へ進む。
+
+#### 6.5.5 SVG エクスポート
+
+作成・更新した各 `.drawio` ファイルを SVG にエクスポートする:
+
+```bash
+xvfb-run drawio --export --format svg --embed-svg-fonts true --output docs/wiki/images/<name>.svg docs/wiki/images/<name>.drawio
+```
+
+> `.drawio`（ソース）と `.svg`（出力）の両方を `docs/wiki/images/` に保持する。
+
+#### 6.5.6 Wiki ページへの埋め込み
+
+新規ダイアグラムの場合、対応する Wiki ページに SVG 画像の参照を追加する:
+
+```markdown
+![ダイアグラムの説明](./images/<name>.svg)
+```
+
+> 既存ダイアグラムの編集の場合、SVG ファイル名が変わらなければ Markdown の参照は更新不要。
 
 ### ステップ 7: 変更をコミット
 
