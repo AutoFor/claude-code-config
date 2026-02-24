@@ -1,6 +1,7 @@
 ---
 name: smart-commit
 description: 会話の文脈と変更内容を分析し、テーマごとにコミットを分割して作成する。
+disable-model-invocation: true
 user-invocable: true
 allowed-tools:
   - Bash

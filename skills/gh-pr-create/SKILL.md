@@ -1,7 +1,7 @@
 ---
 name: gh-pr-create
 description: 作業完了時に GitHub PR を作成し、ブランチ名から Issue を検出して紐付けを行う。ユーザーが「作業が完了した」「PRを作成したい」と言ったときに使用します。
-disable-model-invocation: false
+disable-model-invocation: true
 user-invocable: true
 allowed-tools:
   - Bash

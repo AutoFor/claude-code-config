@@ -1,7 +1,7 @@
 ---
 name: gh-pr-approve
 description: PR の承認・マージと後処理（Issue クローズ、ブランチ切り替え、Worktree 削除）を行う。ユーザーが「PRを承認する」「マージして」と言ったときに使用します。
-disable-model-invocation: false
+disable-model-invocation: true
 user-invocable: true
 allowed-tools:
   - Bash
