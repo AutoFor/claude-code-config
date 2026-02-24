@@ -1,128 +1,95 @@
 ---
 name: gh-finish
-description: 作業完了時に一気にマージまで実行する。ブランチ上なら PR 作成→マージ、main 上なら Issue・ブランチ作成から PR マージまで自動判定。
+description: 作業完了時に一気にマージまで実行する。Codex MCP へ委譲。
 disable-model-invocation: false
 user-invocable: true
 allowed-tools:
   - Bash
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
+  - mcp__codex__codex
 ---
 
-# GitHub 作業完了スキル（完全インライン版）
+# GitHub 作業完了スキル（Codex委譲版）
 
-現在のブランチ状態を判定し、Issue 作成〜マージまでをすべてインラインで実行する。
-Skill ツールによるサブスキル委譲は行わない。
+## Step 1: コンテキスト収集（Claude Code が実行）
 
-## 絶対禁止事項
-
-- `gh pr review --approve` は使用しないこと（自分の PR は GitHub の仕様上承認できない）
-- Skill ツールでサブスキルを呼び出さないこと
-
----
-
-## Step 0: ブランチ判定
+以下を bash で実行して結果を記録する:
 
 ```bash
+pwd
 git branch --show-current
-git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'
+git remote get-url origin
+git status --short
+git worktree list
 ```
 
-- 現在ブランチ = デフォルトブランチ → **フロー A**（Step A-1 へ）
-- 現在ブランチ ≠ デフォルトブランチ → **フロー B**（Step B-0 へ）
+## Step 2: Codex へ委譲
+
+Step 1 の結果を埋め込んで `mcp__codex__codex` を呼び出す。
+
+`message` に以下を渡す（`<>` 内は Step 1 の実際の値で置換）:
 
 ---
 
-## フロー A: main/master 上にいる場合
-
-### Step A-1: リポジトリ情報を取得
-
-```bash
-git remote -v
 ```
+作業ディレクトリ: <pwd>
+現在ブランチ: <git branch --show-current>
+デフォルトブランチ: <symbolic-ref 結果>
+リポジトリ (owner/repo): <git remote get-url origin から抽出>
+Worktree: <git worktree list の1行目パス。1行のみなら none>
+変更ファイル: <git status --short>
 
-`owner` と `repo` を特定する。
+以下の手順をすべて実行してください。
 
-→ Step A-2 へ
+## ブランチ判定
+- 現在ブランチ = デフォルトブランチ → フロー A
+- 現在ブランチ ≠ デフォルトブランチ → フロー B
 
-### Step A-2: 変更内容を収集
+---
 
-```bash
-git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+## フロー A: デフォルトブランチ上にいる場合
+
+### A-1. 変更内容を収集する
 git status --short
 git diff
 git diff --cached
 git log origin/<デフォルトブランチ>..HEAD --oneline
-```
 
-**変更が一切ない場合**（status・diff・未プッシュコミットすべて空）:
-「変更がありません。」と表示して停止する。
+変更が一切ない場合（status・diff・未プッシュコミットすべて空）は「変更がありません。」と表示して終了。
 
-→ Step A-3 へ
-
-### Step A-3: Issue タイトルを自動生成
-
-Step A-2 の diff・status・コミットログを分析し、日本語で簡潔な Issue タイトルを生成する。
-
+### A-2. Issue タイトルを自動生成する
+diff・status・コミットログを分析し、日本語で簡潔なタイトルを生成する。
 例: `hooks設定を新フォーマットに修正` / `ダークモード対応を追加`
 
-→ Step A-4 へ
-
-### Step A-4: GitHub Issue を作成
-
-```bash
+### A-3. GitHub Issue を作成する
 gh issue create \
   --title "<自動生成タイトル>" \
   --body "<diff に基づいた作業概要>"
-```
 
 出力 URL から Issue 番号を記録する。
 
-→ Step A-5 へ
+### A-4. ブランチを作成する
+Issue タイトルを英語スラッグに変換（小文字・ハイフン・3〜5語）。
+ブランチ名: issue-<Issue番号>-<英語スラッグ>
 
-### Step A-5: ブランチを作成
+未プッシュコミットがある場合:
+  git checkout -b <ブランチ名>
+  git branch -f <デフォルトブランチ> origin/<デフォルトブランチ>
 
-1. Issue タイトルを英語スラッグに変換（小文字・ハイフン・3〜5語）
-2. ブランチ名: `issue-<Issue番号>-<英語スラッグ>`
+未プッシュコミットがない場合:
+  git checkout -b <ブランチ名>
 
-**未プッシュコミットがある場合:**
-```bash
-git checkout -b <ブランチ名>
-git branch -f <デフォルトブランチ> origin/<デフォルトブランチ>
-```
+### A-5. 変更をコミットする
+未コミットの変更がない場合はスキップ。
 
-**未プッシュコミットがない場合:**
-```bash
-git checkout -b <ブランチ名>
-```
+ファイルをテーマ（機能追加・修正・設定変更・ドキュメント）でグループ化し、グループごとにコミット:
+  git add <ファイル1> <ファイル2> ...
+  git commit -m "<type>: <日本語説明>"
 
-→ Step A-6 へ
+コミットメッセージは Conventional Commits 形式（feat/fix/chore/docs/refactor/test/style）。
 
-### Step A-6: 変更をコミット（スマートコミット）
-
-未コミットの変更がない場合はスキップして Step A-7 へ。
-
-変更ファイルをテーマ（機能追加・修正・設定変更・ドキュメントなど）でグループ化し、グループごとにコミットする:
-
-```bash
-git add <ファイル1> <ファイル2> ...
-git commit -m "<type>: <日本語説明>"
-```
-
-コミットメッセージは Conventional Commits 形式（`feat`/`fix`/`chore`/`docs`/`refactor`/`test`/`style`）。
-
-→ Step A-7 へ
-
-### Step A-7: プッシュして Draft PR を作成
-
-```bash
+### A-6. プッシュして Draft PR を作成する
 git push -u origin <ブランチ名>
-```
-
-```bash
 gh pr create \
   --draft \
   --title "WIP: <Issueタイトル>" \
@@ -131,232 +98,125 @@ gh pr create \
 作業中..." \
   --head "<ブランチ名>" \
   --base "<デフォルトブランチ>"
-```
 
-→ **Step 1（共通）** へ
+→ 共通ステップへ
 
 ---
 
 ## フロー B: feature ブランチ上にいる場合
 
-### Step B-0: 変更状態を確認
-
-```bash
+### B-1. 変更状態を確認する
 git status --short
 git log @{u}..HEAD --oneline 2>/dev/null
-```
 
-- 未コミットの変更あり → Step B-1 へ
-- 未プッシュのコミットあり → `git push` して **Step 1（共通）** へ
-- すべて完了済み → **Step 1（共通）** へ
+未コミットの変更あり → B-2 へ
+未プッシュのコミットあり → git push して共通ステップへ
+すべて完了済み → 共通ステップへ
 
-### Step B-1: 変更をコミット（スマートコミット）
-
-```bash
+### B-2. 変更をコミットしてプッシュする
 git diff
 git diff --cached
-```
 
-変更ファイルをテーマでグループ化し、グループごとにコミットする:
+ファイルをテーマでグループ化してコミット（Conventional Commits、日本語）:
+  git add <ファイル1> ...
+  git commit -m "<type>: <日本語説明>"
+  git push -u origin $(git branch --show-current)
 
-```bash
-git add <ファイル1> <ファイル2> ...
-git commit -m "<type>: <日本語説明>"
-```
-
-```bash
-git push -u origin $(git branch --show-current)
-```
-
-→ **Step 1（共通）** へ
+→ 共通ステップへ
 
 ---
 
-## Step 1（共通）: メインリポジトリパスを記録
+## 共通: Wiki ドキュメント更新（失敗しても続行）
 
-```bash
-git worktree list
-```
-
-1行目のパスを記憶する（Step 5 の後処理で使用）。
-Worktree なし（1行のみ）の場合は `none` として扱う。
-
-→ Step 2 へ
-
----
-
-## Step 2（共通）: Wiki ドキュメント更新（オプション）
-
-> 失敗してもマージ処理は続行する。
-
-### Step 2-1: ブランチの変更差分を取得
-
-```bash
+### W-1. 変更差分を取得する
 git fetch origin <デフォルトブランチ>
-git log origin/<デフォルトブランチ>..HEAD --oneline
 git diff origin/<デフォルトブランチ>...HEAD --name-only
 git diff origin/<デフォルトブランチ>...HEAD
-```
 
-→ Step 2-2 へ
+### W-2. docs/wiki/ の存在確認
+存在しない場合はスキップ。
+存在する場合は既存の Markdown ファイルを cat で読み込む。
 
-### Step 2-2: docs/wiki/ の存在確認
-
-存在しない場合はステップ 2 全体をスキップして Step 3 へ。
-存在する場合は既存の Markdown ファイルを Read で読み込む。
-
-→ Step 2-3 へ
-
-### Step 2-3: Wiki ページを更新
-
-変更内容を分析し、影響を受けるページを Write/Edit で更新する。
-ユーザー向け仕様の変化がない場合は最終更新日のみ更新する。
-
-→ Step 2-4 へ
-
-### Step 2-4: コミット・プッシュ
-
-```bash
-git status --short docs/wiki/
-```
+### W-3. Wiki ページを更新する
+変更内容を分析し、影響を受けるページを更新する。
+ユーザー向け仕様の変化がない場合は最終更新日のみ更新。
 
 変更がある場合:
-
-```bash
-git add docs/wiki/
-git commit -m "docs: Wiki を更新"
-git push
-```
-
-変更がない場合はスキップ。
-
-→ Step 3 へ
+  git add docs/wiki/
+  git commit -m "docs: Wiki を更新"
+  git push
 
 ---
 
-## Step 3（共通）: PR を Ready for Review に変更
+## 共通: PR を Ready for Review に変更
 
-### Step 3-1: ブランチ名から Issue 番号を抽出
-
-```bash
+### P-1. ブランチ名から Issue 番号を抽出する
 git branch --show-current
-```
 
-`issue-(\d+)` パターンで抽出する。
-見つからない場合は警告を表示して停止する。
+issue-(\d+) パターンで抽出。見つからない場合は警告を表示して停止。
 
-→ Step 3-2 へ
-
-### Step 3-2: 未コミット変更の確認
-
-```bash
+### P-2. 未コミット変更を確認する
 git status --short
-```
 
-変更がある場合は Step A-6 と同様にコミット・プッシュしてから次へ進む。
+変更がある場合はコミット・プッシュしてから続行。
 
-→ Step 3-3 へ
-
-### Step 3-3: 既存 Draft PR を検索
-
-```bash
+### P-3. 既存 Draft PR を確認する
 gh pr list --head $(git branch --show-current) --state open --json number,isDraft,title
-```
 
-- Draft PR あり → Step 3-4A へ
-- Draft PR なし → Step 3-4B へ
+Draft PR あり → P-4A へ
+Draft PR なし → P-4B へ
 
-### Step 3-4A: 既存 Draft PR を更新・Ready for Review に変更
-
-```bash
+### P-4A. 既存 Draft PR を更新・Ready for Review に変更する
 gh api repos/<owner>/<repo>/pulls/<PR番号> -X PATCH \
   -f title="<WIP プレフィックスを除いたタイトル>" \
   -f body="Closes #<Issue番号>
 
 <変更内容の詳細>"
-```
 
-```bash
 gh pr ready <PR番号>
-```
 
-→ Step 4 へ
-
-### Step 3-4B: 新規 PR を作成
-
-```bash
+### P-4B. 新規 PR を作成する
 gh pr create \
   --title "<タイトル>" \
   --body "Closes #<Issue番号>
 
 <変更内容の詳細>"
-```
-
-→ Step 4 へ
 
 ---
 
-## Step 4（共通）: PR 承認・マージ
+## 共通: PR 承認・マージ
 
-### Step 4-1: GitHub App Bot で PR 承認
-
-```bash
+### M-1. GitHub App Bot で PR を承認する
 bash ~/.claude/skills/gh-pr-approve/approve-pr.sh <owner> <repo> <PR番号>
-```
 
-**403 エラーの場合:** ブランチ保護が無効の可能性があるため、承認なしで Step 4-2 へ進む。
+403 エラーの場合は承認をスキップして M-2 へ進む。
 
-→ Step 4-2 へ
-
-### Step 4-2: PR をマージ
-
-```bash
+### M-2. PR をマージする
 gh pr merge <PR番号> --squash --repo <owner>/<repo>
-```
-
-マージ完了を確認:
-
-```bash
 gh pr view <PR番号> --repo <owner>/<repo> --json state,mergedAt
-```
 
-→ Step 4-3 へ
-
-### Step 4-3: Issue クローズ確認
-
-```bash
+### M-3. Issue クローズを確認する
 gh issue view <Issue番号> --repo <owner>/<repo> --json state
-```
 
-`CLOSED` でない場合:
-
-```bash
-gh issue close <Issue番号> --repo <owner>/<repo>
-```
-
-→ Step 5 へ
+CLOSED でない場合:
+  gh issue close <Issue番号> --repo <owner>/<repo>
 
 ---
 
-## Step 5（共通）: 後処理
+## 共通: 後処理
 
-```bash
 bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh \
   <メインリポジトリパス> \
   <WorktreeパスまたはNone> \
   <デフォルトブランチ> \
   <ブランチ名>
-```
-
-→ Step 6 へ
 
 ---
 
-## Step 6: 完了メッセージ
+## 完了報告
 
-以下の形式で表示する:
+以下の形式で報告する:
 
-```
 ✅ PR のマージと後処理が完了しました。
 
 完了した作業：
