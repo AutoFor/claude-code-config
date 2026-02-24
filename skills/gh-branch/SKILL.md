@@ -1,7 +1,7 @@
 ---
 name: gh-branch
 description: 作業中の変更内容（diff）から自動で GitHub Issue を作成し、ブランチを作成する（Worktree なし）。main 上の未プッシュコミットがある場合は自動でブランチに移植する。
-disable-model-invocation: false
+disable-model-invocation: true
 user-invocable: true
 allowed-tools:
   - Bash

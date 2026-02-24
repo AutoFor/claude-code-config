@@ -1,7 +1,7 @@
 ---
 name: gh-wiki-update
 description: コード変更を分析して /docs/wiki/ 配下の Wiki ドキュメント（Markdown）を自動更新する。gh-finish から自動で呼ばれるほか、単独でも使用可能。
-disable-model-invocation: false
+disable-model-invocation: true
 user-invocable: true
 allowed-tools:
   - Bash
