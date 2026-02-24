@@ -15,6 +15,8 @@ Claude Code dotfiles の機能一覧と仕様です。
 | gh-pr-approve | `/gh-pr-approve` | Bot で PR 承認 → マージ → Issue クローズ → Worktree 削除 |
 | gh-finish | `/gh-finish` | 状況を自動判定し、Issue 作成〜マージまで一括実行 |
 
+※ GitHub 系スキルは 2026-02-24 時点で Codex MCP への委譲フローに統一。
+
 ### コーディング
 
 | スキル | コマンド | 説明 |
@@ -85,4 +87,4 @@ Claude Code dotfiles の機能一覧と仕様です。
 
 ---
 
-*最終更新: 2026-02-24 (gh-finish インライン化)*
+*最終更新: 2026-02-24 (GitHub系スキルのCodex委譲化)*
