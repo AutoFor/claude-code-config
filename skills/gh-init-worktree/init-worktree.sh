@@ -56,15 +56,16 @@ echo "一時ディレクトリに退避中: $TMPDIR"
 mv "$TARGET_DIR/.git" "$TMPDIR/git-backup"
 
 # 作業ファイルを一時ディレクトリに移動（.で始まるファイルも含む、一時ディレクトリ自体は除く）
+mkdir -p "$TMPDIR/files-backup"
 TMPDIR_NAME=$(basename "$TMPDIR")
 for item in "$TARGET_DIR"/* "$TARGET_DIR"/.[!.]* "$TARGET_DIR"/..?*; do
   [ -e "$item" ] || continue
   item_name=$(basename "$item")
   [ "$item_name" = "$TMPDIR_NAME" ] && continue
-  mv "$item" "$TMPDIR/files-backup/" 2>/dev/null || {
-    mkdir -p "$TMPDIR/files-backup"
-    mv "$item" "$TMPDIR/files-backup/"
-  }
+  # 移動失敗時はコピー＋削除を試み、それでも駄目ならスキップ（bin/obj 等のロックされたビルド成果物）
+  mv "$item" "$TMPDIR/files-backup/" 2>/dev/null || \
+    (cp -r "$item" "$TMPDIR/files-backup/" && rm -rf "$item") 2>/dev/null || \
+    echo "警告: $item_name の移動をスキップしました（ロックされている可能性があります）"
 done
 
 # .git/ → .bare/ に変換
