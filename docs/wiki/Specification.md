@@ -15,13 +15,12 @@ Claude Code dotfiles の機能一覧と仕様です。
 | gh-pr-approve | `/gh-pr-approve` | Bot で PR 承認 → マージ → Issue クローズ → Worktree 削除 |
 | gh-finish | `/gh-finish` | 状況を自動判定し、Issue 作成〜マージまで一括実行 |
 
-※ GitHub 系スキルは 2026-02-24 時点で Codex MCP への委譲フローに統一。
+※ `gh-finish` は 2026-02-26 時点でサブスキル委譲をなくし、完全インライン実行に刷新。
 
 ### コーディング
 
 | スキル | コマンド | 説明 |
 |--------|---------|------|
-| japanese-comments | `/japanese-comments` | TypeScript/JS コードに日本語の行末コメントを追加 |
 | smart-commit | `/smart-commit` | 変更をテーマ別に分割し Conventional Commits 形式でコミット |
 
 ### ユーティリティ
@@ -43,25 +42,26 @@ Claude Code dotfiles の機能一覧と仕様です。
 > [draw.io ソースファイル](./images/skill-workflow.drawio) で編集できます
 
 ```
-/gh-worktree-branch "機能追加"
-    │
-    ├── Issue 作成
-    ├── Worktree + ブランチ作成
-    └── Draft PR 作成
+フェーズ1: GitHub 準備
+    /gh-worktree-branch "機能追加"  または  /gh-worktree-from-issue 123
         │
-        ▼
-    コーディング作業
+        ├── Issue 作成 + Draft PR
+        └── Worktree + ブランチ作成
+
+フェーズ2: AI 駆動開発
+    コーディング作業（main / branch / worktree）
+
+フェーズ3: GitHub 統合
+    /gh-finish
         │
-        ▼
-/gh-finish
-    │
-    ├── /smart-commit（変更をコミット）
-    ├── /gh-wiki-update（Wiki + ダイアグラム更新）
-    ├── /gh-pr-create（PR 作成）
-    └── /gh-pr-approve（承認・マージ）
-        │
-        ▼
-    GitHub Actions: docs/wiki/ → Wiki 同期
+        ├── コミット（テーマ別）
+        ├── Wiki 更新（docs/wiki/）
+        ├── PR Ready for Review
+        ├── Bot 承認・マージ
+        └── Issue クローズ・ブランチ削除
+            │
+            ▼
+        GitHub Actions: docs/wiki/ → Wiki 同期
 ```
 
 ### Wiki 更新の仕組み
@@ -87,4 +87,4 @@ Claude Code dotfiles の機能一覧と仕様です。
 
 ---
 
-*最終更新: 2026-02-24 (GitHub系スキルのCodex委譲化)*
+*最終更新: 2026-02-26 (SKILL.md 全面改訂・gh-finish インライン化)*
