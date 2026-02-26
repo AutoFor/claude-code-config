@@ -1,87 +1,99 @@
 ---
 name: gh-worktree-branch
-description: 新しい作業を開始するときに GitHub Issue を作成し、Git Worktree とブランチを作成する。Codex MCP へ委譲。
+description: 新しい作業を開始するときに GitHub Issue を作成し、Git Worktree とブランチを作成する。
 disable-model-invocation: false
 user-invocable: true
 allowed-tools:
   - Bash
-  - mcp__codex__codex
 ---
 
-# Git Worktree ブランチ作成スキル（Codex委譲版）
+# Git Worktree ブランチ作成スキル（Issue-first）
 
 ## 引数の処理
 
-- **引数なし** (`/gh-worktree-branch`): 「作業内容を伝えてください」と表示して **停止する**
-- **引数あり** (`/gh-worktree-branch ダークモード対応`): 以下のフローを実行する
+- **引数なし** (`/gh-worktree-branch`): 「作業内容を伝えてください」と表示して **停止する。それ以上何もしない。**
+- **引数あり** (`/gh-worktree-branch ダークモード対応`): 引数を Issue タイトルとして使用し、以下のフローを実行する。
 
-## Step 1: コンテキスト収集（Claude Code が実行）
+## 実行フロー（引数ありの場合）
+
+### 0. 古い Worktree の自動掃除
+
+前回のセッションで削除が遅延された Worktree がある場合、自動的に削除する:
 
 ```bash
-pwd
-git remote get-url origin
-git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'
-git worktree list
-```
-
-## Step 2: Codex へ委譲
-
-Step 1 の結果と引数を埋め込んで `mcp__codex__codex` を呼び出す。
-
-`message` に以下を渡す（`<>` 内は実際の値で置換）:
-
----
-
-```
-作業ディレクトリ: <pwd>
-リポジトリ (owner/repo): <git remote get-url origin から抽出>
-デフォルトブランチ: <symbolic-ref 結果>
-Worktree リスト: <git worktree list 結果>
-Issue タイトル（引数）: <ユーザーの引数>
-
-以下の手順を実行してください。
-
-## 1. 古い Worktree の掃除
 bash ~/.claude/skills/gh-pr-approve/cleanup-stale-worktrees.sh
+```
 
-## 2. GitHub Issue を作成する
-gh issue create \
-  --title "<Issue タイトル（引数をそのまま使用）>" \
-  --body "<作業の概要>"
+出力がない場合は掃除不要。
 
-出力 URL から Issue 番号を記録する。
+### 1. リポジトリ情報を取得
 
-## 3. ブランチ名を生成する
-Issue タイトルを英語スラッグに変換（小文字・ハイフン・3〜5語）。
-ブランチ名: issue-<Issue番号>-<英語スラッグ>
-例: issue-17-add-dark-mode
+```bash
+git remote -v
+```
 
-## 4. Worktree を作成する
+出力から `owner` と `repo` を特定する。
+
+### 2. GitHub Issue を作成
+
+```bash
+gh issue create --title "<ユーザーの引数>" --body "<作業の概要を簡潔に記載>"
+```
+
+出力 URL から Issue 番号を抽出する（例: `https://github.com/owner/repo/issues/17` → `17`）。
+
+### 3. ブランチ名を生成
+
+1. ユーザーの引数を英語スラッグに変換する
+   - 小文字、ハイフン区切り、英数字のみ
+   - 3〜5単語程度に簡潔にまとめる
+   - 例: `ダークモード追加` → `add-dark-mode`
+2. ブランチ名: `issue-<Issue番号>-<英語スラッグ>`
+   - 例: `issue-17-add-dark-mode`
+
+### 4. Worktree を作成
+
+```bash
 bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh <ブランチ名>
+```
 
-スクリプト出力のディレクトリパスを記録する。
+### 5. Worktree ディレクトリに移動
 
-## 5. 空コミットを作成して push する
-cd <Worktree パス>
+スクリプト出力のディレクトリに `cd` する。
+
+### 5a. 空コミットを作成して push
+
+Worktree 作成直後は差分がないため、空コミットでブランチをリモートに push する：
+
+```bash
 git commit --allow-empty -m "chore: start work on #<Issue番号>"
 git push -u origin <ブランチ名>
+```
 
-## 6. Draft PR を作成する
-gh pr create \
-  --draft \
-  --title "WIP: <Issueタイトル>" \
-  --body "Closes #<Issue番号>
+### 5b. Draft PR を作成
 
-作業中..." \
-  --head "<ブランチ名>" \
-  --base "<デフォルトブランチ>"
+```bash
+gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue番号>
 
-## 7. クリップボードにコピーする
+作業中..."
+```
+
+### 6. クリップボードにコピー
+
+Worktree のパスをクリップボードにコピーする：
+
+```bash
 bash ~/.claude/skills/_shared/copy-to-clipboard.sh "cd <Worktreeの絶対パス> && claude"
+```
 
-## 完了報告
-以下の形式で報告する（これ以上何も出力しない）:
+- コマンドが **成功** した場合 → 完了メッセージに「📋 クリップボードにコピー済み」と表示
+- コマンドが **失敗** した場合 → 完了メッセージに「⚠ 手動でコピーしてください」と表示
 
+### 7. 完了メッセージ
+
+以下の形式で出力する：
+
+```
 処理が終了しました。
 
 Issue: #<Issue番号> - <Issueタイトル>
@@ -91,3 +103,5 @@ Draft PR: #<PR番号>
 📋 クリップボードにコピー済み: cd <Worktreeの絶対パス> && claude
 新しいターミナルで貼り付けて作業を開始してください。
 ```
+
+**これ以上何も出力しない。コード編集・次のステップの提案は一切しない。**
