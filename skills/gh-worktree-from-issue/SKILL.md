@@ -1,107 +1,239 @@
 ---
 name: gh-worktree-from-issue
-description: 既存の GitHub Issue から Git Worktree を使った作業ブランチを作成する。Codex MCP へ委譲。
+description: 既存の GitHub Issue から Git Worktree を使った作業ブランチを作成する。ユーザーが「Issue #123 から作業を開始したい」「既存のIssueで作業する」と言ったときに使用します。
 disable-model-invocation: false
 user-invocable: true
 allowed-tools:
   - Bash
-  - mcp__codex__codex
 ---
 
-# Git Worktree from Issue スキル（Codex委譲版）
+# Git Worktree from Issue スキル
 
-## Step 1: コンテキスト収集（Claude Code が実行）
+このスキルは、既存の GitHub Issue から Git Worktree を使って作業ブランチを作成する標準手順を提供します。
+
+## ⚠️ 重要な禁止事項
+
+- **master（またはmain）ブランチで直接コード修正を行わない**
+- **master ブランチで `git commit` や `git push` を提案しない**
+- 既存Issueから作業を開始する際は、必ずこのスキルを使用する
+
+## 実行手順
+
+### 0. 古い Worktree の自動掃除
+
+前回のセッションで削除が遅延された Worktree がある場合、自動的に削除する:
 
 ```bash
-pwd
-git remote get-url origin
-git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'
-git worktree list
-```
-
-Issue 番号が引数で指定された場合:
-```bash
-gh issue view <Issue番号> --json number,title,labels
-```
-
-Issue 番号が指定されない場合:
-```bash
-gh issue list --state open --json number,title,labels --limit 20
-```
-
-## Step 2: Codex へ委譲
-
-Step 1 の結果を埋め込んで `mcp__codex__codex` を呼び出す。
-
-`message` に以下を渡す（`<>` 内は実際の値で置換）:
-
----
-
-```
-作業ディレクトリ: <pwd>
-リポジトリ (owner/repo): <git remote get-url origin から抽出>
-デフォルトブランチ: <symbolic-ref 結果>
-Worktree リスト: <git worktree list 結果>
-Issue 情報: <gh issue view または gh issue list の結果>
-
-以下の手順を実行してください。
-
-## 1. 古い Worktree の掃除
 bash ~/.claude/skills/gh-pr-approve/cleanup-stale-worktrees.sh
+```
 
-## 2. Issue の確定
-Issue 番号が指定されている場合はそのまま使用する。
-Issue 番号が指定されていない場合は Issue リストを表示してユーザーに番号を入力させる:
-  「どの Issue で作業を開始しますか？番号を入力してください:」
+出力がない場合は掃除不要。
 
-## 3. ブランチ名を生成する
-Issue のラベルに基づいてプレフィックスを決定:
-- bug/fix/hotfix ラベル → fix/
-- それ以外 → feature/
+### 1. 引数の確認とIssue取得
 
-ブランチ名: <プレフィックス>/issue-<Issue番号>-<英語スラッグ>
-例: feature/issue-123-add-preview / fix/issue-456-parse-error
+**引数がある場合（例: `/gh-worktree-from-issue 123`）:**
+- 指定されたIssue番号の詳細を取得
 
-## 4. Worktree を作成する
-git rev-parse --git-common-dir で init モード（.bare）か判定する。
+```bash
+gh issue view <Issue番号> --json number,title,labels,state
+```
 
-init モード（.bare 構造）の場合:
-  CONTAINER_DIR=$(dirname $(git rev-parse --git-common-dir))
-  git worktree add "${CONTAINER_DIR}/<ブランチ種別>" -b <ブランチ名>
+**引数がない場合:**
+- リポジトリのOpen状態のIssue一覧を取得してユーザーに選択肢を提示
 
-通常モードの場合:
-  PROJ=$(basename $(git rev-parse --show-toplevel))
-  git worktree add "../${PROJ}-<ブランチ種別>" -b <ブランチ名>
+```bash
+gh issue list --state open --json number,title,labels --limit 50
+```
 
-## 5. 空コミットを作成して push する
-cd <Worktree パス>
+**Issue一覧の表示例:**
+```
+以下のOpen Issueが見つかりました:
+
+1. #123 - プレビュー機能の追加 (feature)
+2. #124 - パースエラーの修正 (bug)
+3. #125 - ドキュメント更新 (documentation)
+
+どのIssueで作業を開始しますか？番号を入力してください:
+```
+
+### 2. Issueタイトルからブランチ名を自動生成
+
+Issue情報から適切なブランチ名を生成する。
+
+**生成ルール:**
+1. Issueのラベルまたはタイトルから `feature` or `fix` を判定
+   - ラベルに `bug`, `fix`, `hotfix` が含まれる → `fix/`
+   - それ以外 → `feature/`
+2. Issue番号を必ず含める: `issue-<番号>`
+3. タイトルから主要なキーワードを抽出（英数字、ハイフン区切り）
+
+**生成例:**
+```
+Issue #123: "プレビュー機能の追加" (ラベル: enhancement)
+  → feature/issue-123-preview-feature
+
+Issue #456: "Fix: パースエラーの修正" (ラベル: bug)
+  → fix/issue-456-parse-error
+
+Issue #789: "ドキュメント更新" (ラベル: documentation)
+  → feature/issue-789-document-update
+```
+
+**日本語タイトルの英語変換例（簡易的）:**
+- "追加" → "add"
+- "修正" → "fix"
+- "更新" → "update"
+- "改善" → "improve"
+- "削除" → "remove"
+
+### 3. Git リポジトリ情報の取得
+
+現在のリポジトリ名を取得する:
+```bash
+git remote -v
+```
+
+プロジェクト名を抽出（例: `claude-code-config`）
+
+### 4. Git Worktree コマンドの実行
+
+まず init モード（`.bare` 構造）かどうかを検出する:
+
+```bash
+GIT_COMMON=$(git rev-parse --git-common-dir)
+if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
+  # init モード: コンテナ内にサブディレクトリとして作成
+  CONTAINER_DIR="$(dirname "$GIT_COMMON")"
+  WORKTREE_DIR="${CONTAINER_DIR}/<ブランチ種別>"
+else
+  # 従来モード: 隣接ディレクトリに作成
+  PROJ=$(basename "$(git rev-parse --show-toplevel)")
+  WORKTREE_DIR="../${PROJ}-<ブランチ種別>"
+fi
+git worktree add "$WORKTREE_DIR" -b <ブランチ名>
+```
+
+**具体例（従来モード）:**
+```bash
+git worktree add ../claude-config-feature -b feature/issue-123-preview-feature
+```
+
+**具体例（init モード）:**
+```bash
+# コンテナが ~/projects/my-project/ の場合
+git worktree add ~/projects/my-project/feature -b feature/issue-123-preview-feature
+```
+
+### 5. 作業ディレクトリへの移動
+
+ステップ 4 で決定した `WORKTREE_DIR` に移動する:
+
+```bash
+cd "$WORKTREE_DIR"
+```
+
+### 5a. 空コミットを作成して push
+
+Worktree 作成直後は差分がないため、空コミットでブランチをリモートに push する：
+
+```bash
 git commit --allow-empty -m "chore: start work on #<Issue番号>"
 git push -u origin <ブランチ名>
+```
 
-## 6. Draft PR を作成する
-gh pr create \
-  --draft \
-  --title "WIP: <Issueタイトル>" \
-  --body "Closes #<Issue番号>
+### 5b. Draft PR を作成
 
-作業中..." \
-  --head "<ブランチ名>" \
-  --base "<デフォルトブランチ>"
+```bash
+gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue番号>
 
-## 7. クリップボードにコピーする
-WORKTREE_ABSPATH=$(cd <Worktree パス> && pwd)
+作業中..."
+```
+
+### 5c. クリップボードにコピー
+
+Worktree の絶対パスを取得し、クリップボードにコピーする：
+
+```bash
+WORKTREE_ABSPATH="$(cd "$WORKTREE_DIR" && pwd)"
 bash ~/.claude/skills/_shared/copy-to-clipboard.sh "cd ${WORKTREE_ABSPATH} && claude"
+```
 
-## 完了報告
-以下の形式で報告する:
+- コマンドが **成功** した場合 → 完了メッセージに「📋 クリップボードにコピー済み」と表示
+- コマンドが **失敗** した場合 → 完了メッセージに「⚠ 手動でコピーしてください」と表示し、コピー用テキストをそのまま表示
 
+### 6. 作業開始の確認メッセージ
+
+ユーザーに以下のメッセージを表示:
+
+```
 Issue #<番号> から作業を開始しました。
 
 Issue: <タイトル>
 ブランチ: <ブランチ名>
-作業ディレクトリ: <Worktree の絶対パス>
+作業ディレクトリ: ../<プロジェクト名>-<ブランチ種別>
 Draft PR: #<PR番号>
 
 📋 クリップボードにコピー済み: cd <Worktreeの絶対パス> && claude
 新しいターミナルで貼り付けて作業を開始してください。
+
+作業完了後は `/gh-pr-create` で Draft PR を Ready for Review に変更してください。
+```
+
+## 実行例
+
+```bash
+# ユーザー入力: /gh-worktree-from-issue 123
+
+# 1. Issue #123 の情報を取得
+# タイトル: "プレビュー機能の追加"
+# ラベル: enhancement
+
+# 2. ブランチ名を生成
+# → feature/issue-123-preview-feature
+
+# 3. Worktree を作成
+git worktree add ../claude-config-feature feature/issue-123-preview-feature
+
+# 4. ディレクトリに移動
+cd ../claude-config-feature
+
+# 5a. 空コミット + push
+git commit --allow-empty -m "chore: start work on #123"
+git push -u origin feature/issue-123-preview-feature
+
+# 5b. Draft PR を作成
+gh pr create --draft --title "WIP: プレビュー機能の追加" --body "Closes #123
+
+作業中..."
+# → Draft PR #124 作成
+
+# 6. 確認メッセージを表示
+# "Issue #123 から作業を開始しました..."
+```
+
+## Worktree のメリット
+
+- ✅ ブランチ切り替え時のファイル変更が不要
+- ✅ ビルドや node_modules 再構築が不要
+- ✅ 緊急対応が入っても作業中のコードを退避する必要がない
+- ✅ 複数の作業を並行して進められる
+
+## 注意事項
+
+- **Issue番号は必ずブランチ名に含める**（後でPR作成時に紐付けるため）
+- Worktreeを削除する前にコミット・プッシュを忘れずに行う
+- `.git` フォルダは元のリポジトリで共有される
+- PRマージ後は忘れずにWorktreeを削除する
+
+## 次のステップ
+
+作業完了後は、以下のスキルを使用して Draft PR を Ready for Review に変更:
+- `/gh-pr-create` - 既存 Draft PR を検出して Ready for Review に変更（Draft PR がない場合は新規作成）
+
+## Worktree 一覧の確認
+
+必要に応じて、以下のコマンドで現在のWorktree一覧を確認できる:
+
+```bash
+git worktree list
 ```
