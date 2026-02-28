@@ -7,8 +7,10 @@ PENDING_FILE="$HOME/.claude/pending-worktree-cleanup.txt"
 [ -f "$PENDING_FILE" ] || exit 0
 
 while IFS='|' read -r REPO WT BRANCH; do
-  # Worktree削除
-  git -C "$REPO" worktree remove "$WT" 2>/dev/null || git -C "$REPO" worktree prune
+  # Worktree削除（"none" または "None" はスキップ）
+  if [ -n "$WT" ] && [ "${WT,,}" != "none" ]; then
+    git -C "$REPO" worktree remove "$WT" 2>/dev/null || git -C "$REPO" worktree prune 2>/dev/null || true
+  fi
   echo "Cleaned up worktree: $WT"
 
   # ローカルブランチ削除
