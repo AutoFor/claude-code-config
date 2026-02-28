@@ -178,8 +178,12 @@ git push -u origin $(git branch --show-current)
 git worktree list
 ```
 
-1行目のパスを記憶する（Step 5 の後処理で使用）。
-Worktree なし（1行のみ）の場合は `none` として扱う。
+**MAIN_REPO の決定ルール（Step 5 で使用）:**
+
+- `git rev-parse --show-toplevel` の出力を MAIN_REPO とする
+- ただし bare worktree 構造（`.bare` ディレクトリがある場合）は、`git worktree list` でデフォルトブランチ（master/main）のワークツリーパスを MAIN_REPO とする
+  - bare リポジトリのパス（`.bare`）は絶対に MAIN_REPO に使わないこと（bare repo では `git checkout` が実行できない）
+- Worktree なし（1行のみ）の場合、現在の作業ディレクトリを MAIN_REPO、Worktree パスは `none` として扱う
 
 → Step 2 へ
 

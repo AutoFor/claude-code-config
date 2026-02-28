@@ -45,7 +45,13 @@ GitHub App Bot を使用するには、以下のセットアップが必要で�
 git worktree list
 ```
 
-出力の1行目がメインリポジトリのパス。**以下の 2 つを独立した Bash コマンドとして順番に実行する（1つの Bash 呼び出しにまとめないこと）:**
+**MAIN_REPO の決定ルール:**
+
+- `git worktree list` の1行目が `.bare` を含む場合 → **bare worktree 構造**。デフォルトブランチ（master/main）のワークツリーパス（例: `<プロジェクトルート>/master`）を MAIN_REPO とする
+- `.bare` でない場合 → 1行目のパスを MAIN_REPO とする
+- **bare リポジトリのパス（`.bare`）は絶対に MAIN_REPO に使わないこと**（bare repo では `git checkout` が実行できず fatal エラーになる）
+
+**以下の 2 つを独立した Bash コマンドとして順番に実行する（1つの Bash 呼び出しにまとめないこと）:**
 
 **Bash コマンド 1:**
 ```bash
