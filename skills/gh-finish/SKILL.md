@@ -343,7 +343,7 @@ gh issue close <Issue番号> --repo <owner>/<repo>
 ```bash
 bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh \
   <メインリポジトリパス> \
-  <WorktreeパスまたはNone> \
+  <Worktreeパスまたはnone（小文字）> \
   <デフォルトブランチ> \
   <ブランチ名>
 ```

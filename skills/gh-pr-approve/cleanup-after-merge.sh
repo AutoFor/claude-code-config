@@ -9,6 +9,11 @@ WORKTREE_PATH="$2"   # Worktreeの絶対パス（Worktree未使用時は "none"�
 DEFAULT_BRANCH="$3"  # デフォルトブランチ名（master or main）
 BRANCH_TO_DELETE="${4:-}"  # 削除するブランチ名（通常ブランチの場合）
 
+# "none"/"None" を正規化（大文字小文字どちらでも動作するよう）
+if [ "${WORKTREE_PATH,,}" = "none" ]; then
+  WORKTREE_PATH="none"
+fi
+
 # ガード: Worktree内から実行するとcwd消失でBashツールが壊れるため防止
 if [ "$WORKTREE_PATH" != "none" ]; then
   CURRENT_DIR="$(pwd -P 2>/dev/null || echo "")"
