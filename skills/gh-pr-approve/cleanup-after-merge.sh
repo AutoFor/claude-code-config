@@ -14,6 +14,12 @@ if [ "${WORKTREE_PATH,,}" = "none" ]; then
   WORKTREE_PATH="none"
 fi
 
+# bare リポジトリ検出: .bare ディレクトリが MAIN_REPO として渡された場合は拒否
+if git -C "$MAIN_REPO" rev-parse --is-bare-repository 2>/dev/null | grep -q "true"; then
+  echo "ERROR: MAIN_REPO '$MAIN_REPO' is a bare repository. Pass the default-branch worktree path (e.g. .../master) instead." >&2
+  exit 1
+fi
+
 # ガード: Worktree内から実行するとcwd消失でBashツールが壊れるため防止
 if [ "$WORKTREE_PATH" != "none" ]; then
   CURRENT_DIR="$(pwd -P 2>/dev/null || echo "")"
