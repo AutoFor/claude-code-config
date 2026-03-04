@@ -24,54 +24,47 @@ Skill ツールによるサブスキル委譲は行わない。
 
 ---
 
-## Step 0: ブランチ判定
+## Step 0: コンテキスト取得
 
 ```bash
-git branch --show-current
-git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+eval "$(bash ~/.claude/skills/_shared/detect-context.sh)"
 ```
 
-- 現在ブランチ = デフォルトブランチ → **フロー A**（Step A-1 へ）
-- 現在ブランチ ≠ デフォルトブランチ → **フロー B**（Step B-0 へ）
+以下の変数が設定される:
+- `CURRENT_BRANCH`, `DEFAULT_BRANCH`, `IS_DEFAULT`
+- `OWNER`, `REPO`
+- `MAIN_REPO`, `WORKTREE_PATH`
+
+- IS_DEFAULT=true → **フロー A**（Step A-1 へ）
+- IS_DEFAULT=false → **フロー B**（Step B-0 へ）
 
 ---
 
 ## フロー A: main/master 上にいる場合
 
-### Step A-1: リポジトリ情報を取得
+### Step A-1: 変更内容を収集
 
 ```bash
-git remote -v
-```
-
-`owner` と `repo` を特定する。
-
-→ Step A-2 へ
-
-### Step A-2: 変更内容を収集
-
-```bash
-git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
 git status --short
 git diff
 git diff --cached
-git log origin/<デフォルトブランチ>..HEAD --oneline
+git log origin/$DEFAULT_BRANCH..HEAD --oneline
 ```
 
 **変更が一切ない場合**（status・diff・未プッシュコミットすべて空）:
 「変更がありません。」と表示して停止する。
 
-→ Step A-3 へ
+→ Step A-2 へ
 
-### Step A-3: Issue タイトルを自動生成
+### Step A-2: Issue タイトルを自動生成
 
-Step A-2 の diff・status・コミットログを分析し、日本語で簡潔な Issue タイトルを生成する。
+Step A-1 の diff・status・コミットログを分析し、日本語で簡潔な Issue タイトルを生成する。
 
 例: `hooks設定を新フォーマットに修正` / `ダークモード対応を追加`
 
-→ Step A-4 へ
+→ Step A-3 へ
 
-### Step A-4: GitHub Issue を作成
+### Step A-3: GitHub Issue を作成
 
 ```bash
 gh issue create \
@@ -81,17 +74,16 @@ gh issue create \
 
 出力 URL から Issue 番号を記録する。
 
-→ Step A-5 へ
+→ Step A-4 へ
 
-### Step A-5: ブランチを作成
+### Step A-4: ブランチを作成
 
-1. Issue タイトルを英語スラッグに変換（小文字・ハイフン・3〜5語）
-2. ブランチ名: `issue-<Issue番号>-<英語スラッグ>`
+ブランチ名: `issue-<Issue番号>`
 
 **未プッシュコミットがある場合:**
 ```bash
 git checkout -b <ブランチ名>
-git branch -f <デフォルトブランチ> origin/<デフォルトブランチ>
+git branch -f $DEFAULT_BRANCH origin/$DEFAULT_BRANCH
 ```
 
 **未プッシュコミットがない場合:**
@@ -99,11 +91,11 @@ git branch -f <デフォルトブランチ> origin/<デフォルトブランチ>
 git checkout -b <ブランチ名>
 ```
 
-→ Step A-6 へ
+→ Step A-5 へ
 
-### Step A-6: 変更をコミット（スマートコミット）
+### Step A-5: 変更をコミット（スマートコミット）
 
-未コミットの変更がない場合はスキップして Step A-7 へ。
+未コミットの変更がない場合はスキップして Step A-6 へ。
 
 変更ファイルをテーマ（機能追加・修正・設定変更・ドキュメントなど）でグループ化し、グループごとにコミットする:
 
@@ -114,9 +106,9 @@ git commit -m "<type>: <日本語説明>"
 
 コミットメッセージは Conventional Commits 形式（`feat`/`fix`/`chore`/`docs`/`refactor`/`test`/`style`）。
 
-→ Step A-7 へ
+→ Step A-6 へ
 
-### Step A-7: プッシュして Draft PR を作成
+### Step A-6: プッシュして Draft PR を作成
 
 ```bash
 git push -u origin <ブランチ名>
@@ -130,8 +122,10 @@ gh pr create \
 
 作業中..." \
   --head "<ブランチ名>" \
-  --base "<デフォルトブランチ>"
+  --base "$DEFAULT_BRANCH"
 ```
+
+PR 番号を記録する。
 
 → **Step 1（共通）** へ
 
@@ -172,18 +166,36 @@ git push -u origin $(git branch --show-current)
 
 ---
 
-## Step 1（共通）: メインリポジトリパスを記録
+## Step 1（共通）: コンテキスト確認
+
+Step 0 の `detect-context.sh` で取得済みの変数（`MAIN_REPO`, `WORKTREE_PATH`）をそのまま使用する。
+再取得は不要。
+
+→ Step 1b へ
+
+---
+
+## Step 1b（フロー B のみ）: Issue タイトル・本文を更新
+
+フロー A（main 上）はスキップして Step 2 へ。
+
+`CURRENT_BRANCH` から `issue-(\d+)` パターンで Issue 番号を抽出し、ブランチの変更内容を分析して Issue を更新する:
 
 ```bash
-git worktree list
+git diff origin/$DEFAULT_BRANCH...HEAD
+git log origin/$DEFAULT_BRANCH..HEAD --oneline
 ```
 
-**MAIN_REPO の決定ルール（Step 5 で使用）:**
+diff・コミットログから日本語で簡潔な Issue タイトルと本文を生成し:
 
-- `git rev-parse --show-toplevel` の出力を MAIN_REPO とする
-- ただし bare worktree 構造（`.bare` ディレクトリがある場合）は、`git worktree list` でデフォルトブランチ（master/main）のワークツリーパスを MAIN_REPO とする
-  - bare リポジトリのパス（`.bare`）は絶対に MAIN_REPO に使わないこと（bare repo では `git checkout` が実行できない）
-- Worktree なし（1行のみ）の場合、現在の作業ディレクトリを MAIN_REPO、Worktree パスは `none` として扱う
+```bash
+gh issue edit <Issue番号> --repo $OWNER/$REPO \
+  --title "<改善されたタイトル>" \
+  --body "<作業内容の詳細な説明>"
+```
+
+- Issue 番号が抽出できない場合はスキップ（警告なし）
+- 失敗してもマージ処理は続行する
 
 → Step 2 へ
 
@@ -196,10 +208,10 @@ git worktree list
 ### Step 2-1: ブランチの変更差分を取得
 
 ```bash
-git fetch origin <デフォルトブランチ>
-git log origin/<デフォルトブランチ>..HEAD --oneline
-git diff origin/<デフォルトブランチ>...HEAD --name-only
-git diff origin/<デフォルトブランチ>...HEAD
+git fetch origin $DEFAULT_BRANCH
+git log origin/$DEFAULT_BRANCH..HEAD --oneline
+git diff origin/$DEFAULT_BRANCH...HEAD --name-only
+git diff origin/$DEFAULT_BRANCH...HEAD
 ```
 
 → Step 2-2 へ
@@ -238,15 +250,11 @@ git push
 
 ---
 
-## Step 3（共通）: PR を Ready for Review に変更
+## Step 3（共通）: PR タイトル・本文を生成して確定
 
 ### Step 3-1: ブランチ名から Issue 番号を抽出
 
-```bash
-git branch --show-current
-```
-
-`issue-(\d+)` パターンで抽出する。
+`CURRENT_BRANCH` の `issue-(\d+)` パターンで抽出する。
 見つからない場合は警告を表示して停止する。
 
 → Step 3-2 へ
@@ -257,31 +265,34 @@ git branch --show-current
 git status --short
 ```
 
-変更がある場合は Step A-6 と同様にコミット・プッシュしてから次へ進む。
+変更がある場合は Step A-5 と同様にコミット・プッシュしてから次へ進む。
 
 → Step 3-3 へ
 
 ### Step 3-3: 既存 Draft PR を検索
 
 ```bash
-gh pr list --head $(git branch --show-current) --state open --json number,isDraft,title
+gh pr list --head $CURRENT_BRANCH --state open --json number,isDraft,title
 ```
 
-- Draft PR あり → Step 3-4A へ
-- Draft PR なし → Step 3-4B へ
+- Draft PR あり → PR 番号を記録して Step 3-4A へ
+- Draft PR なし → Step 3-4B（新規 PR 作成）へ
 
-### Step 3-4A: 既存 Draft PR を更新・Ready for Review に変更
+### Step 3-4A: PR 本文を生成して pr-finalize.sh を実行
+
+ブランチの変更内容を分析し、PR タイトル（WIP プレフィックスなし）と本文を生成する。
 
 ```bash
-gh api repos/<owner>/<repo>/pulls/<PR番号> -X PATCH \
-  -f title="<WIP プレフィックスを除いたタイトル>" \
-  -f body="Closes #<Issue番号>
+cat > /tmp/pr-body-$PR_NUMBER.md << 'PREOF'
+Closes #<Issue番号>
 
-<変更内容の詳細>"
+<変更内容の詳細>
+PREOF
 ```
 
 ```bash
-gh pr ready <PR番号>
+bash ~/.claude/skills/gh-finish/pr-finalize.sh \
+  "$OWNER" "$REPO" "<PR番号>" "<Issue番号>" "<タイトル>" /tmp/pr-body-$PR_NUMBER.md
 ```
 
 → Step 4 へ
@@ -296,16 +307,19 @@ gh pr create \
 <変更内容の詳細>"
 ```
 
-→ Step 4 へ
+PR 番号を記録して → Step 4 へ
 
 ---
 
-## Step 4（共通）: PR 承認・マージ
+## Step 4（共通）: PR 承認・マージ・Issue クローズ
+
+Step 3-4A を経由した場合は `pr-finalize.sh` が承認・マージ・Issue クローズまで完了済み。
+**Step 3-4B（新規 PR 作成）を経由した場合のみ**以下を実行する:
 
 ### Step 4-1: GitHub App Bot で PR 承認
 
 ```bash
-bash ~/.claude/skills/gh-pr-approve/approve-pr.sh <owner> <repo> <PR番号>
+bash ~/.claude/skills/gh-pr-approve/approve-pr.sh $OWNER $REPO <PR番号>
 ```
 
 **403 エラーの場合:** ブランチ保護が無効の可能性があるため、承認なしで Step 4-2 へ進む。
@@ -315,13 +329,7 @@ bash ~/.claude/skills/gh-pr-approve/approve-pr.sh <owner> <repo> <PR番号>
 ### Step 4-2: PR をマージ
 
 ```bash
-gh pr merge <PR番号> --squash --repo <owner>/<repo>
-```
-
-マージ完了を確認:
-
-```bash
-gh pr view <PR番号> --repo <owner>/<repo> --json state,mergedAt
+gh pr merge <PR番号> --squash --repo $OWNER/$REPO
 ```
 
 → Step 4-3 へ
@@ -329,13 +337,13 @@ gh pr view <PR番号> --repo <owner>/<repo> --json state,mergedAt
 ### Step 4-3: Issue クローズ確認
 
 ```bash
-gh issue view <Issue番号> --repo <owner>/<repo> --json state
+gh issue view <Issue番号> --repo $OWNER/$REPO --json state --jq '.state'
 ```
 
 `CLOSED` でない場合:
 
 ```bash
-gh issue close <Issue番号> --repo <owner>/<repo>
+gh issue close <Issue番号> --repo $OWNER/$REPO
 ```
 
 → Step 5 へ
@@ -346,10 +354,10 @@ gh issue close <Issue番号> --repo <owner>/<repo>
 
 ```bash
 bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh \
-  <メインリポジトリパス> \
-  <Worktreeパスまたはnone（小文字）> \
-  <デフォルトブランチ> \
-  <ブランチ名>
+  "$MAIN_REPO" \
+  "$WORKTREE_PATH" \
+  "$DEFAULT_BRANCH" \
+  "$CURRENT_BRANCH"
 ```
 
 → Step 6 へ
