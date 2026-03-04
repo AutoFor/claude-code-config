@@ -13,6 +13,16 @@ DEFAULT_BRANCH=$(gh api repos/:owner/:repo --jq '.default_branch' 2>/dev/null) \
   || DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/{print $NF}') \
   || DEFAULT_BRANCH="main"
 
+# / が含まれていたら feature ブランチと判断して再検証
+if echo "$DEFAULT_BRANCH" | grep -q '/'; then
+  for candidate in main master; do
+    if git rev-parse --verify "origin/$candidate" &>/dev/null 2>&1; then
+      DEFAULT_BRANCH="$candidate"
+      break
+    fi
+  done
+fi
+
 # --- IS_DEFAULT ---
 if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
   IS_DEFAULT="true"
